@@ -49,8 +49,13 @@ security = HTTPBearer()
 # Initialize Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (only if database is available)
+try:
+    engine = get_engine()
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.warning(f"Could not create database tables: {e}")
 
 # Include routers
 app.include_router(users.router, prefix="/api/users", tags=["users"])
