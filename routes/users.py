@@ -47,7 +47,9 @@ async def get_github_auth_url():
         raise HTTPException(status_code=500, detail="GitHub OAuth not configured")
     
     # Redirect URL should be your frontend callback URL
-    redirect_uri = "https://logiscore-frontend.vercel.app/callback"
+    # For testing, you can use localhost, but for production use the Vercel URL
+    redirect_uri = "http://localhost:5173/callback"  # For local testing
+    # redirect_uri = "https://logiscore-frontend.vercel.app/callback"  # For production
     auth_url = f"https://github.com/login/oauth/authorize?client_id={github_client_id}&redirect_uri={redirect_uri}&scope=user:email"
     
     return {"auth_url": auth_url}
