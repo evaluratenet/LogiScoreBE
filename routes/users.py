@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from datetime import timedelta
+import os
 
 from database.database import get_db
 from database.models import User
@@ -37,6 +38,45 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+@router.get("/github/auth")
+async def get_github_auth_url():
+    """Get GitHub OAuth authorization URL"""
+    github_client_id = os.getenv("GITHUB_CLIENT_ID")
+    if not github_client_id:
+        raise HTTPException(status_code=500, detail="GitHub OAuth not configured")
+    
+    # Redirect URL should be your frontend callback URL
+    redirect_uri = "https://logiscore-frontend.vercel.app/callback"
+    auth_url = f"https://github.com/login/oauth/authorize?client_id={github_client_id}&redirect_uri={redirect_uri}&scope=user:email"
+    
+    return {"auth_url": auth_url}
+
+@router.post("/github/callback", response_model=TokenResponse)
+async def github_callback(
+    auth_request: GitHubAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """Handle GitHub OAuth callback"""
+    try:
+        user = await authenticate_github_user(auth_request.code, db)
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)}, expires_delta=access_token_expires
+        )
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse.from_orm(user)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Authentication failed: {str(e)}"
+        )
 
 @router.post("/auth/github", response_model=TokenResponse)
 async def github_auth(
