@@ -7,27 +7,40 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is required")
-
-# Create SQLAlchemy engine
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    echo=False  # Set to True for SQL debugging
-)
+# Create SQLAlchemy engine lazily
+def get_engine():
+    """Get database engine, creating it if necessary"""
+    if not hasattr(get_engine, '_engine'):
+        if DATABASE_URL.startswith('postgres'):
+            # PostgreSQL configuration
+            get_engine._engine = create_engine(
+                DATABASE_URL,
+                pool_pre_ping=True,
+                pool_recycle=300,
+                echo=False
+            )
+        else:
+            # SQLite fallback for development
+            get_engine._engine = create_engine(
+                DATABASE_URL,
+                connect_args={"check_same_thread": False},
+                echo=False
+            )
+    return get_engine._engine
 
 # Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_session_local():
+    """Get SessionLocal class"""
+    return sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
 
 # Create Base class
 Base = declarative_base()
 
 def get_db():
     """Dependency to get database session"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         yield db
