@@ -75,6 +75,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check"""
+    error_msg = None
     try:
         # Test database connection
         db = next(get_db())
@@ -84,12 +85,13 @@ async def health_check():
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         db_status = "unhealthy"
+        error_msg = str(e)
     
     return {
         "status": "healthy" if db_status == "healthy" else "unhealthy",
         "database": db_status,
         "timestamp": datetime.utcnow().isoformat(),
-        "error": str(e) if db_status == "unhealthy" else None
+        "error": error_msg
     }
 
 @app.get("/api/test")
