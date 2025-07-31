@@ -48,6 +48,23 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj):
+        # Convert UUID to string for the id field
+        data = {
+            'id': str(obj.id),
+            'email': obj.email,
+            'username': obj.username,
+            'full_name': obj.full_name,
+            'avatar_url': obj.avatar_url,
+            'company_name': obj.company_name,
+            'user_type': obj.user_type,
+            'subscription_tier': obj.subscription_tier,
+            'is_verified': obj.is_verified,
+            'is_active': obj.is_active
+        }
+        return cls(**data)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -150,9 +167,8 @@ async def signup(
                 detail="User with this email already exists"
             )
         
-        # Hash password (temporarily disabled for debugging)
-        # hashed_password = pwd_context.hash(signup_request.password)
-        hashed_password = "temp_hash_for_debugging"
+        # Hash password
+        hashed_password = pwd_context.hash(signup_request.password)
         
         # Create new user
         user = User(
