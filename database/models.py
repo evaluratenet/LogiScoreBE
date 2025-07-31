@@ -14,6 +14,7 @@ class User(Base):
     full_name = Column(String(255), nullable=True)
     avatar_url = Column(Text, nullable=True)
     company_name = Column(String(255), nullable=True)
+    hashed_password = Column(String(255), nullable=True)  # For email/password auth
     user_type = Column(String(20), default='shipper')
     subscription_tier = Column(String(20), default='free')
     stripe_customer_id = Column(String(255), nullable=True)

@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import timedelta
 import os
+import uuid
+from passlib.context import CryptContext
 
 from database.database import get_db
 from database.models import User
@@ -14,10 +16,23 @@ from auth.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 router = APIRouter()
 
 class GitHubAuthRequest(BaseModel):
     code: str
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    company: Optional[str] = None
+
+class SigninRequest(BaseModel):
+    email: str
+    password: str
 
 class UserResponse(BaseModel):
     id: str
@@ -118,4 +133,84 @@ async def get_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse.from_orm(user) 
+    return UserResponse.from_orm(user)
+
+@router.post("/signup", response_model=TokenResponse)
+async def signup(
+    signup_request: SignupRequest,
+    db: Session = Depends(get_db)
+):
+    """Register a new user with email/password"""
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == signup_request.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    # Hash password
+    hashed_password = pwd_context.hash(signup_request.password)
+    
+    # Create new user
+    user = User(
+        id=str(uuid.uuid4()),
+        email=signup_request.email,
+        username=signup_request.name,
+        full_name=signup_request.name,
+        company_name=signup_request.company,
+        hashed_password=hashed_password,
+        user_type="regular",
+        subscription_tier="free",
+        is_verified=False,
+        is_active=True
+    )
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse.from_orm(user)
+    )
+
+@router.post("/signin", response_model=TokenResponse)
+async def signin(
+    signin_request: SigninRequest,
+    db: Session = Depends(get_db)
+):
+    """Authenticate user with email/password"""
+    # Find user by email
+    user = db.query(User).filter(User.email == signin_request.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    
+    # Verify password
+    if not pwd_context.verify(signin_request.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse.from_orm(user)
+    ) 
