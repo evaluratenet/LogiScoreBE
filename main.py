@@ -10,7 +10,7 @@ from typing import Optional
 import logging
 
 # Import our modules
-from database.database import get_db, engine
+from database.database import get_db, get_engine
 from database.models import Base
 from auth.auth import get_current_user, create_access_token
 from routes import users, freight_forwarders, reviews, search
