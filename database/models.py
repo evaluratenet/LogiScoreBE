@@ -33,15 +33,7 @@ class FreightForwarder(Base):
     name = Column(String(255), nullable=False)
     website = Column(String(255), nullable=True)
     logo_url = Column(Text, nullable=True)
-    description = Column(Text, nullable=True)
-    headquarters = Column(String(255), nullable=True)
-    founded_year = Column(Integer, nullable=True)
-    employee_count = Column(String(100), nullable=True)
-    services = Column(Text, nullable=True)
-    is_verified = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
     branches = relationship("Branch", back_populates="freight_forwarder")
