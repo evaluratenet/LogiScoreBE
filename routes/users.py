@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from datetime import timedelta
+from datetime import timedelta, datetime
 import os
 import uuid
 from passlib.context import CryptContext
@@ -33,6 +33,18 @@ class SignupRequest(BaseModel):
 class SigninRequest(BaseModel):
     email: str
     password: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    reset_token: str
+    new_password: str
 
 class UserResponse(BaseModel):
     id: str
@@ -246,4 +258,119 @@ async def signin(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Signin failed: {str(e)}"
+        )
+
+@router.post("/change-password")
+async def change_password(
+    change_request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change user password"""
+    try:
+        # Verify current password
+        if not pwd_context.verify(change_request.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+        
+        # Hash new password
+        new_hashed_password = pwd_context.hash(change_request.new_password)
+        
+        # Update password in database
+        current_user.hashed_password = new_hashed_password
+        db.commit()
+        
+        return {"message": "Password changed successfully"}
+    except Exception as e:
+        import logging
+        logging.error(f"Change password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password change failed: {str(e)}"
+        )
+
+@router.post("/forgot-password")
+async def forgot_password(
+    forgot_request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """Send password reset email"""
+    try:
+        # Find user by email
+        user = db.query(User).filter(User.email == forgot_request.email).first()
+        if not user:
+            # Don't reveal if user exists or not for security
+            return {"message": "If the email exists, a reset link has been sent"}
+        
+        # Generate reset token (simple implementation - in production, use proper email service)
+        reset_token = str(uuid.uuid4())
+        
+        # Store reset token in user record (you might want a separate table for this)
+        # For now, we'll use a simple approach
+        user.reset_token = reset_token
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        
+        # In production, send email here
+        # For now, just return the token (in production, send via email)
+        return {
+            "message": "Password reset link sent to email",
+            "reset_token": reset_token,  # Remove this in production
+            "expires_in": "1 hour"
+        }
+    except Exception as e:
+        import logging
+        logging.error(f"Forgot password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password reset request failed: {str(e)}"
+        )
+
+@router.post("/reset-password")
+async def reset_password(
+    reset_request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """Reset password using reset token"""
+    try:
+        # Find user by email
+        user = db.query(User).filter(User.email == reset_request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email or reset token"
+            )
+        
+        # Verify reset token
+        if not user.reset_token or user.reset_token != reset_request.reset_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reset token"
+            )
+        
+        # Check if token is expired
+        if user.reset_token_expires and user.reset_token_expires < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reset token has expired"
+            )
+        
+        # Hash new password
+        new_hashed_password = pwd_context.hash(reset_request.new_password)
+        
+        # Update password and clear reset token
+        user.hashed_password = new_hashed_password
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.commit()
+        
+        return {"message": "Password reset successfully"}
+    except Exception as e:
+        import logging
+        logging.error(f"Reset password error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Password reset failed: {str(e)}"
         ) 

@@ -15,6 +15,8 @@ class User(Base):
     avatar_url = Column(Text, nullable=True)
     company_name = Column(String(255), nullable=True)
     hashed_password = Column(String(255), nullable=True)  # For email/password auth
+    reset_token = Column(String(255), nullable=True)  # For password reset
+    reset_token_expires = Column(DateTime(timezone=True), nullable=True)  # For password reset
     user_type = Column(String(20), default='shipper')
     subscription_tier = Column(String(20), default='free')
     stripe_customer_id = Column(String(255), nullable=True)
