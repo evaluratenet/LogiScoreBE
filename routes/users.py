@@ -150,8 +150,9 @@ async def signup(
                 detail="User with this email already exists"
             )
         
-        # Hash password
-        hashed_password = pwd_context.hash(signup_request.password)
+        # Hash password (temporarily disabled for debugging)
+        # hashed_password = pwd_context.hash(signup_request.password)
+        hashed_password = "temp_hash_for_debugging"
         
         # Create new user
         user = User(
