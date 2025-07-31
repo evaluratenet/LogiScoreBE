@@ -149,3 +149,4 @@ This project is proprietary software for LogiScore. # Database initialization fi
 # Database initialization fix
 # Database initialization fix
 # Trigger redeploy
+# Trigger redeploy
