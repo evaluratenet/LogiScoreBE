@@ -141,46 +141,54 @@ async def signup(
     db: Session = Depends(get_db)
 ):
     """Register a new user with email/password"""
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == signup_request.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
+    try:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == signup_request.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email already exists"
+            )
+        
+        # Hash password
+        hashed_password = pwd_context.hash(signup_request.password)
+        
+        # Create new user
+        user = User(
+            id=str(uuid.uuid4()),
+            email=signup_request.email,
+            username=signup_request.name,
+            full_name=signup_request.name,
+            company_name=signup_request.company,
+            hashed_password=hashed_password,
+            user_type="shipper",  # Changed from "regular" to "shipper"
+            subscription_tier="free",
+            is_verified=False,
+            is_active=True
         )
-    
-    # Hash password
-    hashed_password = pwd_context.hash(signup_request.password)
-    
-    # Create new user
-    user = User(
-        id=str(uuid.uuid4()),
-        email=signup_request.email,
-        username=signup_request.name,
-        full_name=signup_request.name,
-        company_name=signup_request.company,
-        hashed_password=hashed_password,
-        user_type="shipper",  # Changed from "regular" to "shipper"
-        subscription_tier="free",
-        is_verified=False,
-        is_active=True
-    )
-    
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
-    
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.from_orm(user)
-    )
+        
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)}, expires_delta=access_token_expires
+        )
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse.from_orm(user)
+        )
+    except Exception as e:
+        import logging
+        logging.error(f"Signup error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signup failed: {str(e)}"
+        )
 
 @router.post("/signin", response_model=TokenResponse)
 async def signin(
@@ -188,29 +196,37 @@ async def signin(
     db: Session = Depends(get_db)
 ):
     """Authenticate user with email/password"""
-    # Find user by email
-    user = db.query(User).filter(User.email == signin_request.email).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+    try:
+        # Find user by email
+        user = db.query(User).filter(User.email == signin_request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if not pwd_context.verify(signin_request.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)}, expires_delta=access_token_expires
         )
-    
-    # Verify password
-    if not pwd_context.verify(signin_request.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse.from_orm(user)
         )
-    
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
-    
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=UserResponse.from_orm(user)
-    ) 
+    except Exception as e:
+        import logging
+        logging.error(f"Signin error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signin failed: {str(e)}"
+        ) 
