@@ -12,13 +12,7 @@ class FreightForwarderResponse(BaseModel):
     name: str
     website: Optional[str]
     logo_url: Optional[str]
-    description: Optional[str]
-    headquarters: Optional[str]
-    founded_year: Optional[int]
-    employee_count: Optional[str]
-    services: Optional[str]
-    is_verified: bool
-    is_active: bool
+    created_at: str
 
     class Config:
         from_attributes = True
@@ -43,14 +37,10 @@ async def get_freight_forwarders(
     db: Session = Depends(get_db)
 ):
     """Get list of freight forwarders with optional search"""
-    query = db.query(FreightForwarder).filter(FreightForwarder.is_active == True)
+    query = db.query(FreightForwarder)
     
     if search:
-        query = query.filter(
-            FreightForwarder.name.ilike(f"%{search}%") |
-            FreightForwarder.description.ilike(f"%{search}%") |
-            FreightForwarder.headquarters.ilike(f"%{search}%")
-        )
+        query = query.filter(FreightForwarder.name.ilike(f"%{search}%"))
     
     freight_forwarders = query.offset(skip).limit(limit).all()
     return [FreightForwarderResponse.from_orm(ff) for ff in freight_forwarders]
@@ -62,8 +52,7 @@ async def get_freight_forwarder(
 ):
     """Get specific freight forwarder by ID"""
     freight_forwarder = db.query(FreightForwarder).filter(
-        FreightForwarder.id == freight_forwarder_id,
-        FreightForwarder.is_active == True
+        FreightForwarder.id == freight_forwarder_id
     ).first()
     
     if not freight_forwarder:
