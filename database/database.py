@@ -9,6 +9,11 @@ load_dotenv()
 # Database URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
+# Ensure PostgreSQL dialect is specified
+if DATABASE_URL.startswith('postgres'):
+    if not DATABASE_URL.startswith('postgresql://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
 # Create SQLAlchemy engine lazily
 def get_engine():
     """Get database engine, creating it if necessary"""
