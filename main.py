@@ -80,6 +80,7 @@ async def health_check():
         db = next(get_db())
         db.execute("SELECT 1")
         db_status = "healthy"
+        logger.info("Database health check passed")
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         db_status = "unhealthy"
@@ -87,7 +88,8 @@ async def health_check():
     return {
         "status": "healthy" if db_status == "healthy" else "unhealthy",
         "database": db_status,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "error": str(e) if db_status == "unhealthy" else None
     }
 
 @app.get("/api/test")
