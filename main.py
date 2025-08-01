@@ -32,19 +32,8 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://logiscore.net",
-        "http://logiscore.net",
-        "https://logiscore-frontend.vercel.app",
-        "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
-        "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:4173"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins temporarily for debugging
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
