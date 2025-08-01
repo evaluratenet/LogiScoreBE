@@ -102,10 +102,7 @@ async def test_endpoint():
     """Test endpoint for development"""
     return {"message": "API is working correctly"}
 
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    """Handle CORS preflight requests"""
-    return {"message": "CORS preflight handled"}
+
 
 if __name__ == "__main__":
     import uvicorn
