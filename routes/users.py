@@ -29,6 +29,7 @@ class SignupRequest(BaseModel):
     password: str
     name: str
     company: Optional[str] = None
+    user_type: Optional[str] = "shipper"
 
 class SigninRequest(BaseModel):
     email: str
@@ -190,7 +191,7 @@ async def signup(
             full_name=signup_request.name,
             company_name=signup_request.company,
             hashed_password=hashed_password,
-            user_type="shipper",  # Changed from "regular" to "shipper"
+            user_type=signup_request.user_type,
             subscription_tier="free",
             is_verified=False,
             is_active=True
