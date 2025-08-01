@@ -13,7 +13,7 @@ import logging
 from database.database import get_db, get_engine
 from database.models import Base
 from auth.auth import get_current_user, create_access_token
-from routes import users, freight_forwarders, reviews, search, admin
+from routes import users, freight_forwarders, reviews, search, admin, auth
 
 # Load environment variables
 load_dotenv()
@@ -59,6 +59,7 @@ app.include_router(freight_forwarders.router, prefix="/api/freight-forwarders", 
 app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 @app.get("/")
 async def root():
