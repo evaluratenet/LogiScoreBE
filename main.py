@@ -35,12 +35,18 @@ app.add_middleware(
     allow_origins=[
         "https://logiscore.net",
         "https://logiscore-frontend.vercel.app",
+        "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
+        "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
         "http://localhost:3000",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:4173"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Security
@@ -95,6 +101,11 @@ async def health_check():
 async def test_endpoint():
     """Test endpoint for development"""
     return {"message": "API is working correctly"}
+
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle CORS preflight requests"""
+    return {"message": "CORS preflight handled"}
 
 if __name__ == "__main__":
     import uvicorn
