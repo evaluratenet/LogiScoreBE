@@ -34,6 +34,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://logiscore.net",
+        "http://logiscore.net",
         "https://logiscore-frontend.vercel.app",
         "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
         "https://logiscore-frontend-git-main-evaluratenet.vercel.app",
